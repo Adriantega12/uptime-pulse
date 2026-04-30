@@ -32,7 +32,7 @@ func getLatency(url string) Result {
 	// Stop timer right after response or error is obtained
 	latency := time.Since(start)
 
-	// Handle error of request
+	// Handle error of request, return as nothing else to do here
 	if err != nil {
 		return Result{
 			url,
