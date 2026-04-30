@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -53,7 +52,7 @@ func getLatency(url string) Result {
 	// Handle status code
 	statusCode := res.StatusCode
 	if statusCode > 299 && body != nil {
-		log.Print("Response failed with status code: %d and\nbody: %s\n", res.StatusCode, body)
+		log.Printf("Response failed with status code: %d and\nbody: %s\n", res.StatusCode, body)
 	}
 
 	// Handle error body
@@ -76,14 +75,33 @@ func main() {
 		"https://fake.com/myfile.txt",
 		"https://github.com",
 	}
-	resultList := []Result{}
 
+	// Create a channel to handle concurrency
+	resultsChannel := make(chan Result, len(urlList))
+
+	// Setup multi threaded execution of getLatency by using wg.Go
 	var wg sync.WaitGroup
 	for _, url := range urlList {
 		wg.Go(func() {
-			resultList = append(resultList, getLatency(url))
+			resultsChannel <- getLatency(url)
 		})
 	}
+
+	// Wait for threads to wrap up
 	wg.Wait()
-	fmt.Print(resultList)
+
+	// Close channel
+	close(resultsChannel)
+
+	// Process results
+	for result := range resultsChannel {
+		log.Printf(
+			"URL : %s, Status Code : %d, Error : %s, Latency : %s, Timestamp : %s\n",
+			result.URL,
+			result.StatusCode,
+			result.Error,
+			result.Latency,
+			result.Timestamp,
+		)
+	}
 }
