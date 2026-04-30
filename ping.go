@@ -5,40 +5,55 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 )
 
-func main() {
+type Result struct {
+	URL        string
+	StatusCode int
+	Error      error
+	Latency    time.Duration
+	Timestamp  time.Time
+}
 
+func getLatency(url string) Result {
 	// Prepare client
-	client := http.Client{
+	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}
 
 	// Start timer
 	start := time.Now()
 
-	// Send request
-	res, err := client.Get("http://www.google.com/robots.txt")
+	// Prepare and send request
+	req, _ := http.NewRequest("GET", url, nil) // Ignoring error of request malformation for now
+	res, err := client.Do(req)
 
-	// Stop timer
+	// Stop timer right after response or error is obtained
 	latency := time.Since(start)
 
 	// Handle error of request
 	if err != nil {
-		log.Fatalf("Request failed: %v", err)
+		return Result{
+			url,
+			-1,
+			err,
+			latency,
+			start,
+		}
 	}
+
 	// Close connection right after checking for error
 	defer res.Body.Close()
-
-	fmt.Printf("Latency is : %s\n", latency)
 
 	// Read body and error if any
 	body, err := io.ReadAll(res.Body)
 
 	// Handle status code
-	if res.StatusCode > 299 && body != nil {
-		log.Printf("Response failed with status code: %d and\nbody: %s\n", res.StatusCode, body)
+	statusCode := res.StatusCode
+	if statusCode > 299 && body != nil {
+		log.Print("Response failed with status code: %d and\nbody: %s\n", res.StatusCode, body)
 	}
 
 	// Handle error body
@@ -46,5 +61,29 @@ func main() {
 		log.Print(err)
 	}
 
-	fmt.Printf("Response body : %s", body)
+	return Result{
+		url,
+		statusCode,
+		nil,
+		latency,
+		start,
+	}
+}
+
+func main() {
+	urlList := []string{
+		"http://google.com/robots.txt",
+		"https://fake.com/myfile.txt",
+		"https://github.com",
+	}
+	resultList := []Result{}
+
+	var wg sync.WaitGroup
+	for _, url := range urlList {
+		wg.Go(func() {
+			resultList = append(resultList, getLatency(url))
+		})
+	}
+	wg.Wait()
+	fmt.Print(resultList)
 }
