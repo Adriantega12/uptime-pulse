@@ -46,7 +46,7 @@ func getLatency(url string) Result {
 	// Close connection right after checking for error
 	defer res.Body.Close()
 
-	// Read body and error if any
+	// Read body and error, if any
 	body, err := io.ReadAll(res.Body)
 
 	// Handle status code
