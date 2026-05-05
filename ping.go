@@ -1,11 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
 
 type Result struct {
@@ -69,7 +74,56 @@ func getLatency(url string) Result {
 	}
 }
 
+func initializeDatabase() *sql.DB {
+	dir := "db"
+	err := os.MkdirAll(dir, 0755)
+	dbFilePath := filepath.Join(dir, "test.sqlite")
+	db, err := sql.Open("sqlite", dbFilePath)
+	if err != nil {
+		log.Fatalf("Error while opening DB : %s", err)
+	}
+
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("Error while pinging DB : %s", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS targets (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			url	TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE IF NOT EXISTS pings (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			target_id INTEGER NOT NULL,
+			status_code INTEGER,
+			latency_ms INTEGER,
+			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY(target_id) REFERENCES targets(id)
+		);
+	`)
+	if err != nil {
+		log.Fatalf("Error while creating tables in DB : %s", err)
+	}
+	return db
+}
+
+func saveResult(db *sql.DB, result Result) {
+	stmt, err := db.Prepare("INSERT INTO targets(url) VALUES(?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if _, err := stmt.Exec(result.URL); err != nil {
+		log.Fatal(err)
+	}
+
+}
+
 func main() {
+	db := initializeDatabase()
 	urlList := []string{
 		"http://google.com/robots.txt",
 		"https://fake.com/myfile.txt",
@@ -103,5 +157,6 @@ func main() {
 			result.Latency,
 			result.Timestamp,
 		)
+		saveResult(db, result)
 	}
 }
