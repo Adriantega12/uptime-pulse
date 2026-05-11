@@ -109,6 +109,23 @@ func initializeDatabase() *sql.DB {
 	return db
 }
 
+func selectPingByUrl(db *sql.DB, url string) {
+	stmt, err := db.Prepare("SELECT id FROM targets WHERE id=?")
+	if err != nil {
+		log.Fatal(err)
+	}
+	rows, err := stmt.Query(url)
+	// sqlResult, err := stmt.Exec(url)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	log.Print(rows.Next())
+}
+
+func savePing(db *sql.DB, result Result) {
+
+}
+
 func saveResult(db *sql.DB, result Result) {
 	stmt, err := db.Prepare("INSERT INTO targets(url) VALUES(?)")
 	if err != nil {
@@ -126,7 +143,7 @@ func main() {
 	db := initializeDatabase()
 	urlList := []string{
 		"http://google.com/robots.txt",
-		"https://fake.com/myfile.txt",
+		"https://fakeurlthisdoesnotexists.com/myfile.txt",
 		"https://github.com",
 	}
 
@@ -149,14 +166,15 @@ func main() {
 
 	// Process results
 	for result := range resultsChannel {
-		log.Printf(
-			"URL : %s, Status Code : %d, Error : %s, Latency : %s, Timestamp : %s\n",
-			result.URL,
-			result.StatusCode,
-			result.Error,
-			result.Latency,
-			result.Timestamp,
-		)
+		// log.Printf(
+		// 	"URL : %s, Status Code : %d, Error : %s, Latency : %s, Timestamp : %s\n",
+		// 	result.URL,
+		// 	result.StatusCode,
+		// 	result.Error,
+		// 	result.Latency,
+		// 	result.Timestamp,
+		// )
 		saveResult(db, result)
+		selectPingByUrl(db, result.URL)
 	}
 }
