@@ -91,13 +91,14 @@ func initializeDatabase() *sql.DB {
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS targets (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			url	TEXT NOT NULL,
+			url	TEXT UNIQUE NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE TABLE IF NOT EXISTS pings (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			target_id INTEGER NOT NULL,
 			status_code INTEGER,
+			error TEXT,
 			latency_ms INTEGER,
 			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY(target_id) REFERENCES targets(id)
@@ -109,37 +110,77 @@ func initializeDatabase() *sql.DB {
 	return db
 }
 
-func selectPingByUrl(db *sql.DB, url string) {
-	stmt, err := db.Prepare("SELECT id FROM targets WHERE id=?")
+func selectTargetByUrl(db *sql.DB, url string) int {
+	stmt, err := db.Prepare("SELECT * FROM targets WHERE url=?")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer stmt.Close()
+
 	rows, err := stmt.Query(url)
-	// sqlResult, err := stmt.Exec(url)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	log.Print(rows.Next())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	id := -1
+	var targetURL string
+	var createdAt string
+	for rows.Next() {
+		if err := rows.Scan(&id, &targetURL, &createdAt); err != nil {
+			log.Printf("Did not find target due to %s", err)
+			return id
+		}
+		log.Printf("Found Target in DB - ID: %d, URL: %s", id, targetURL)
+	}
+
+	return id
 }
 
-func savePing(db *sql.DB, result Result) {
-
-}
-
-func saveResult(db *sql.DB, result Result) {
+func saveTarget(db *sql.DB, url string) int {
 	stmt, err := db.Prepare("INSERT INTO targets(url) VALUES(?)")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
 
-	if _, err := stmt.Exec(result.URL); err != nil {
+	res, err := stmt.Exec(url)
+	if err != nil {
 		log.Fatal(err)
 	}
+	newId, _ := res.LastInsertId()
+	return int(newId)
+}
 
+func saveResult(db *sql.DB, result Result) {
+	// Check if URL has been pinged before
+	url := result.URL
+	targetId := selectTargetByUrl(db, url)
+	if targetId == -1 {
+		targetId = saveTarget(db, url)
+	}
+
+	stmt, err := db.Prepare("INSERT INTO pings(target_id, status_code, error, latency_ms) VALUES(?, ?, ?, ?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	statusCode := result.StatusCode
+	latencyMs := result.Latency
+	var errMessage string
+	if statusCode == -1 {
+		errMessage = result.Error.Error()
+
+	}
+	if _, err := stmt.Exec(targetId, statusCode, errMessage, latencyMs); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
+	// debug.PrintStack()
+
 	db := initializeDatabase()
 	urlList := []string{
 		"http://google.com/robots.txt",
@@ -150,31 +191,29 @@ func main() {
 	// Create a channel to handle concurrency
 	resultsChannel := make(chan Result, len(urlList))
 
-	// Setup multi threaded execution of getLatency by using wg.Go
-	var wg sync.WaitGroup
+	// Worker routine to write into DB
+	var dbWg sync.WaitGroup
+	dbWg.Go(func() {
+		for result := range resultsChannel {
+			saveResult(db, result)
+		}
+	})
+
+	// Setup multi threaded execution of getLatency by using pingWg.Go
+	var pingWg sync.WaitGroup
 	for _, url := range urlList {
-		wg.Go(func() {
+		pingWg.Go(func() {
 			resultsChannel <- getLatency(url)
 		})
 	}
 
-	// Wait for threads to wrap up
-	wg.Wait()
-
+	// Faster procedure ends first
+	// Wait for ping threads to wrap up
+	pingWg.Wait()
 	// Close channel
 	close(resultsChannel)
 
-	// Process results
-	for result := range resultsChannel {
-		// log.Printf(
-		// 	"URL : %s, Status Code : %d, Error : %s, Latency : %s, Timestamp : %s\n",
-		// 	result.URL,
-		// 	result.StatusCode,
-		// 	result.Error,
-		// 	result.Latency,
-		// 	result.Timestamp,
-		// )
-		saveResult(db, result)
-		selectPingByUrl(db, result.URL)
-	}
+	// Slower Disk I/O ends later because it depends on pingWg
+	// Wait for worker threads to wrap up
+	dbWg.Wait()
 }
