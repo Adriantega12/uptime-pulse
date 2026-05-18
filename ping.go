@@ -77,6 +77,9 @@ func getLatency(url string) Result {
 func initializeDatabase() *sql.DB {
 	dir := "db"
 	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		log.Fatalf("Error while trying to create directory : %s", err)
+	}
 	dbFilePath := filepath.Join(dir, "test.sqlite")
 	db, err := sql.Open("sqlite", dbFilePath)
 	if err != nil {
