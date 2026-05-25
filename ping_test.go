@@ -67,10 +67,7 @@ func TestGetLatencyStatusCode(t *testing.T) {
 			// Need to start server, but only if no mock URL is given
 			var url string
 			if mockUrl == "" {
-				// Start server
 				server.Start()
-
-				// Get relevant info from server
 				url = server.URL
 			} else {
 				url = mockUrl
