@@ -1,6 +1,9 @@
 package engine
 
-import "log"
+import (
+	"fmt"
+	"log"
+)
 
 func (e *UptimeEngine) getTargetByUrl(url string) int {
 	rows, err := e.GetTargetByUrlStatement.Query(url)
@@ -69,4 +72,38 @@ func (e *UptimeEngine) getAllTargetUrls() []string {
 	}
 
 	return urlList
+}
+
+func (e *UptimeEngine) getLatestPings() ([]TargetPingsView, []error) {
+	rows, err := e.GetLatestPingsStatement.Query()
+	if err != nil {
+		return nil, []error{err}
+	}
+	defer rows.Close()
+
+	var id int
+	var url string
+	var statusCode int
+	var errMessage string
+	var latencyMs int
+	var timestamp string
+	targetPingsViews := []TargetPingsView{}
+	scanErrors := []error{}
+	for rows.Next() {
+		if err = rows.Scan(&id, &url, &statusCode, &errMessage, &latencyMs, &timestamp); err != nil {
+			// log.Printf("Error scanning view ping row %s", err)
+			scanErrors = append(scanErrors, fmt.Errorf("Error scanning view ping row: %w", err))
+			continue
+		}
+		targetPingsViews = append(targetPingsViews, TargetPingsView{
+			id,
+			url,
+			statusCode,
+			errMessage,
+			latencyMs,
+			timestamp,
+		})
+	}
+
+	return targetPingsViews, scanErrors
 }

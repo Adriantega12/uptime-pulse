@@ -14,6 +14,7 @@ type UptimeEngine struct {
 	SaveTargetStatement       *sql.Stmt
 	SavePingStatement         *sql.Stmt
 	GetAllTargetUrlsStatement *sql.Stmt
+	GetLatestPingsStatement   *sql.Stmt
 }
 
 func NewUptimeEngine() *UptimeEngine {
@@ -73,6 +74,19 @@ func NewUptimeEngine() *UptimeEngine {
 	if err != nil {
 		log.Fatal(err)
 	}
+	getLatestPingsStatement, err := db.Prepare(`
+		SELECT t.id, t.url, IFNULL(p.status_code, 0), IFNULL(p.error, ''), IFNULL(p.latency_ms, 0), IFNULL(p.timestamp, '')
+		FROM targets t
+		LEFT JOIN pings p ON t.id = p.target_id
+		WHERE p.id = (
+    		SELECT MAX(id) 
+    		FROM pings 
+    		WHERE target_id = t.id
+		) OR p.id IS NULL
+	`)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return &UptimeEngine{
 		DB:                        db,
@@ -80,6 +94,7 @@ func NewUptimeEngine() *UptimeEngine {
 		SaveTargetStatement:       saveTargetStatement,
 		SavePingStatement:         savePingStatement,
 		GetAllTargetUrlsStatement: getAllTargetUrlsStatement,
+		GetLatestPingsStatement:   getLatestPingsStatement,
 	}
 }
 
@@ -88,6 +103,7 @@ func (e *UptimeEngine) CloseUptimeEngineStatements() {
 	e.SaveTargetStatement.Close()
 	e.SavePingStatement.Close()
 	e.GetAllTargetUrlsStatement.Close()
+	e.GetLatestPingsStatement.Close()
 }
 
 func (e *UptimeEngine) DoGetLatencyCallback() {

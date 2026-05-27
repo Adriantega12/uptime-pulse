@@ -67,3 +67,12 @@ func GetLatency(url string) Result {
 		start,
 	}
 }
+
+type TargetPingsView struct {
+	ID         int
+	URL        string
+	StatusCode int
+	Error      string
+	LatencyMs  int
+	Timestamp  string
+}
