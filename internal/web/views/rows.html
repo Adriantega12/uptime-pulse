@@ -1,0 +1,16 @@
+{{range .}}
+
+    <tr data-id="{{.ID}}">
+        <td>{{.URL}}</td>
+        <td>{{.StatusCode}}</td>
+        <td>{{.LatencyMs}}</td>
+        <td>{{.Error}}</td>
+        <td>{{.Timestamp}}</td>
+    </tr>
+    {{else}}
+        <tr>
+            <td colspan="5" style="text-align: center; color: var(--muted-color);">
+                No active targets registered inside the database parameters.
+            </td>
+        </tr>
+    {{end}}

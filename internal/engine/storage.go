@@ -91,7 +91,6 @@ func (e *UptimeEngine) getLatestPings() ([]TargetPingsView, []error) {
 	scanErrors := []error{}
 	for rows.Next() {
 		if err = rows.Scan(&id, &url, &statusCode, &errMessage, &latencyMs, &timestamp); err != nil {
-			// log.Printf("Error scanning view ping row %s", err)
 			scanErrors = append(scanErrors, fmt.Errorf("Error scanning view ping row: %w", err))
 			continue
 		}
