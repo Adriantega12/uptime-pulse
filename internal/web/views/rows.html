@@ -1,16 +1,29 @@
 {{range .}}
-
     <tr data-id="{{.ID}}">
         <td>{{.URL}}</td>
-        <td>{{.StatusCode}}</td>
-        <td>{{.LatencyMs}}</td>
-        <td>{{.Error}}</td>
+        <td>
+            {{if eq .StatusCode 200}}
+            <span style="color: #2da44e; font-weight: bold;">🟢 {{.StatusCode}} OK</span>
+            {{else if lte .StatusCode 0}}
+            <span style="color: #cf222e; font-weight: bold;">🔴 CRASH</span>
+            {{else}}
+            <span style="color: #db6d28; font-weight: bold;">⚠️ {{.StatusCode}} Alert</span>
+            {{end}}
+        </td>
+        <td><code>{{.LatencyMs}}ms</code></td>
+        <td>
+            {{if .Error}}
+            <small style="color: #cf222e;"><code>{{.Error}}</code></small>
+            {{else}}
+            <small style="color: #57606a;">N/A</small>
+            {{end}}
+        </td>
         <td>{{.Timestamp}}</td>
     </tr>
     {{else}}
-        <tr>
-            <td colspan="5" style="text-align: center; color: var(--muted-color);">
-                No active targets registered inside the database parameters.
-            </td>
-        </tr>
-    {{end}}
+    <tr>
+        <td colspan="5" style="text-align: center; color: var(--muted-color);">
+            No active targets registered inside the database parameters.
+        </td>
+    </tr>
+{{end}}
