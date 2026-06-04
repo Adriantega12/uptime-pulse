@@ -1,9 +1,10 @@
 package web
 
 import (
+	"fmt"
 	"html/template"
 	"log"
-	"fmt"
+	"net/http"
 
 	"uptime-pulse/internal/engine"
 )
@@ -24,5 +25,39 @@ func NewServer(uptimeEngine *engine.UptimeEngine) *Server {
 	return &Server{
 		uptimeEngine,
 		templates,
+	}
+}
+
+func (s *Server) HandleDashboard(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	err := s.Templates.ExecuteTemplate(w, "layout.html", nil)
+	if err != nil {
+		log.Printf("Error executing template : %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) HandlePingsAPI(w http.ResponseWriter, r *http.Request) {
+	targetPingsView, scanErrors := s.Engine.GetLatestPings()
+
+	// Error scanning latest ping
+	if targetPingsView != nil && len(scanErrors) > 0 {
+		for _, scanError := range scanErrors {
+			log.Printf("Error getting latest ping of a given target : %v", scanError)
+		}
+	}
+
+	// Error querying database
+	if len(scanErrors) > 0 {
+		log.Printf("Error getting latest pings : %v", scanErrors[0])
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	err := s.Templates.ExecuteTemplate(w, "rows.html", targetPingsView)
+	if err != nil {
+		log.Printf("Error executing template : %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }

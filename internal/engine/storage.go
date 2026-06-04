@@ -74,7 +74,7 @@ func (e *UptimeEngine) getAllTargetUrls() []string {
 	return urlList
 }
 
-func (e *UptimeEngine) getLatestPings() ([]TargetPingsView, []error) {
+func (e *UptimeEngine) GetLatestPings() ([]TargetPingsView, []error) {
 	rows, err := e.GetLatestPingsStatement.Query()
 	if err != nil {
 		return nil, []error{err}
