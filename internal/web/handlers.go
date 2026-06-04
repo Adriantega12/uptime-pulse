@@ -48,7 +48,7 @@ func (s *Server) HandlePingsAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Error querying database
-	if len(scanErrors) > 0 {
+	if targetPingsView == nil && len(scanErrors) > 0 {
 		log.Printf("Error getting latest pings : %v", scanErrors[0])
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
