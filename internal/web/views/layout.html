@@ -23,7 +23,7 @@
                             <th>Last Checked</th>
                         </tr>
                     </thead>
-                    <tbody id="status-rows">
+                    <tbody id="status-rows" hx-get="/api/pings" hx-trigger="load, every 5s">
                         <tr>
                             <td>Waiting for incoming operational data sync cycle...</td>
                             <td>Test</td>

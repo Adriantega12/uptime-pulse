@@ -4,7 +4,7 @@
         <td>
             {{if eq .StatusCode 200}}
             <span style="color: #2da44e; font-weight: bold;">🟢 {{.StatusCode}} OK</span>
-            {{else if lte .StatusCode 0}}
+            {{else if le .StatusCode 0}}
             <span style="color: #cf222e; font-weight: bold;">🔴 CRASH</span>
             {{else}}
             <span style="color: #db6d28; font-weight: bold;">⚠️ {{.StatusCode}} Alert</span>
