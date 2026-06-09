@@ -26,3 +26,11 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+
+    - name: Go Coverage
+      uses: gwatts/go-coverage-action@v2.0.0
+      id: coverage
+      coverage-threshold: 80
+      ignore-pattern: |
+          \.pb\.go$
+          \_string\.go$
