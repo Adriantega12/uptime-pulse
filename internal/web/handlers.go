@@ -14,8 +14,10 @@ type Server struct {
 	Templates *template.Template
 }
 
-func NewServer(uptimeEngine *engine.UptimeEngine) *Server {
-	viewsDirectory := "internal/web/views"
+func NewServer(
+	uptimeEngine *engine.UptimeEngine,
+	viewsDirectory string,
+) *Server {
 	layoutFilePath := fmt.Sprintf("%s/layout.html", viewsDirectory)
 	rowsFilePath := fmt.Sprintf("%s/rows.html", viewsDirectory)
 	templates, err := template.ParseFiles(layoutFilePath, rowsFilePath)

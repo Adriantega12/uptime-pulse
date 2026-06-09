@@ -18,7 +18,7 @@ func main() {
 
 	// Initialize engines
 	uptimeEngine := engine.NewUptimeEngine()
-	webServer := web.NewServer(uptimeEngine)
+	webServer := web.NewServer(uptimeEngine, "internal/web/views")
 
 	// Web server logic
 	http.HandleFunc("/", webServer.HandleDashboard)
