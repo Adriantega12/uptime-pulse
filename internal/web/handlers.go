@@ -5,17 +5,20 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-
 	"uptime-pulse/internal/engine"
 )
 
+type PingResultProvider interface {
+	GetLatestPings() ([]engine.TargetPingsView, []error)
+}
+
 type Server struct {
-	Engine    *engine.UptimeEngine
+	Engine    PingResultProvider
 	Templates *template.Template
 }
 
 func NewServer(
-	uptimeEngine *engine.UptimeEngine,
+	uptimeEngine PingResultProvider,
 	viewsDirectory string,
 ) *Server {
 	layoutFilePath := fmt.Sprintf("%s/layout.html", viewsDirectory)
