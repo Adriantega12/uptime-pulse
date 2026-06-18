@@ -1,10 +1,11 @@
-package main
+package engine_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+	"uptime-pulse/internal/engine"
 )
 
 var getLatencyResponseCodeTests = []struct {
@@ -80,7 +81,7 @@ func TestGetLatencyStatusCode(t *testing.T) {
 			 */
 			defer server.Close()
 
-			result := getLatency(url)
+			result := engine.GetLatency(url)
 			actualStatusCode := result.StatusCode
 			if actualStatusCode != expectedStatusCode {
 				t.Errorf("Expected : %d, got : %d", expectedStatusCode, actualStatusCode)
