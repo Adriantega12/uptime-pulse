@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+        <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    </head>
+    <body>
+        <main class="container">
+            <header>Uptime Pulse Monitor</header>
+            <section>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Target URL</th>
+                            <th>Status Code</th>
+                            <th>Network Latency</th>
+                            <th>Diagnostic Errors</th>
+                            <th>Last Checked</th>
+                        </tr>
+                    </thead>
+                    <tbody id="status-rows" hx-get="/api/pings" hx-trigger="load, every 5s">
+                        <tr>
+                            <td>Waiting for incoming operational data sync cycle...</td>
+                            <td>Test</td>
+                            <td>Test</td>
+                            <td>Test</td>
+                            <td>Test</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </body>
+</html>
