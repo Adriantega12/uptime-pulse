@@ -35,4 +35,5 @@ jobs:
         ignore-pattern: |
           \.pb\.go$
           \_string\.go$
+          \main.go$
       

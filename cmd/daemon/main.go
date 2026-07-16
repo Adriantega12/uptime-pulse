@@ -14,8 +14,6 @@ import (
 )
 
 func main() {
-	// debug.PrintStack()
-
 	// Initialize engines
 	uptimeEngine := engine.NewUptimeEngine()
 	webServer := web.NewServer(uptimeEngine, "internal/web/views")
