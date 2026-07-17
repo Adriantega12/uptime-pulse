@@ -1,6 +1,7 @@
 package web_test
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -88,5 +89,31 @@ func TestHandlePingsAPI(t *testing.T) {
 	}
 	if !strings.Contains(stringBodyBytes, "45ms") { // Assuming your HTML maps standard suffix layouts
 		t.Errorf("Expected metric cell string insertion missing. Output: %s", stringBodyBytes)
+	}
+}
+
+func TestHandlePingsAPI_DatabaseFailure(t *testing.T) {
+	mockFaultyEngine := &MockEngine{
+		MockViews:  nil,
+		MockErrors: []error{errors.New("sqlite: database is locked")},
+	}
+
+	webServer := web.NewServer(mockFaultyEngine, "views")
+
+	request, _ := http.NewRequest(http.MethodGet, "/api/pings", nil)
+	recorder := httptest.NewRecorder()
+
+	webServer.HandlePingsAPI(recorder, request)
+	response := recorder.Result()
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected status code 500 Internal Server Error, got: %d", response.StatusCode)
+	}
+
+	bodyBytes, _ := io.ReadAll(response.Body)
+	stringBodyBytes := string(bodyBytes)
+	if !strings.Contains(stringBodyBytes, "Internal Server Error") {
+		t.Errorf("Expected fallback string response body error message, got: %s", stringBodyBytes)
 	}
 }
