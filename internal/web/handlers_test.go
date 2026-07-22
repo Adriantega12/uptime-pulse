@@ -1,6 +1,8 @@
 package web_test
 
 import (
+	"errors"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -46,6 +48,28 @@ func TestHandleDashboard(t *testing.T) {
 	}
 }
 
+func TestHandleDashboard_TemplateError(t *testing.T) {
+	// 1. Create a server instance
+	webServer := web.NewServer(nil, "views")
+
+	// 2. Overwrite Templates with an empty template collection
+	// (It doesn't have "layout.html" registered!)
+	webServer.Templates = template.New("empty")
+
+	request, _ := http.NewRequest(http.MethodGet, "/", nil)
+	recorder := httptest.NewRecorder()
+
+	// 3. Act
+	webServer.HandleDashboard(recorder, request)
+	response := recorder.Result()
+	defer response.Body.Close()
+
+	// 4. Assert that the fallback 500 Internal Server Error path executed
+	if response.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected status code 500 on template failure, got: %d", response.StatusCode)
+	}
+}
+
 func TestHandlePingsAPI(t *testing.T) {
 	fakeData := []engine.TargetPingsView{
 		{
@@ -88,5 +112,59 @@ func TestHandlePingsAPI(t *testing.T) {
 	}
 	if !strings.Contains(stringBodyBytes, "45ms") { // Assuming your HTML maps standard suffix layouts
 		t.Errorf("Expected metric cell string insertion missing. Output: %s", stringBodyBytes)
+	}
+}
+
+func TestHandlePingsAPI_DatabaseFailure(t *testing.T) {
+	mockFaultyEngine := &MockEngine{
+		MockViews:  nil,
+		MockErrors: []error{errors.New("sqlite: database is locked")},
+	}
+
+	webServer := web.NewServer(mockFaultyEngine, "views")
+
+	request, _ := http.NewRequest(http.MethodGet, "/api/pings", nil)
+	recorder := httptest.NewRecorder()
+
+	webServer.HandlePingsAPI(recorder, request)
+	response := recorder.Result()
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected status code 500 Internal Server Error, got: %d", response.StatusCode)
+	}
+
+	bodyBytes, _ := io.ReadAll(response.Body)
+	stringBodyBytes := string(bodyBytes)
+	if !strings.Contains(stringBodyBytes, "Internal Server Error") {
+		t.Errorf("Expected fallback string response body error message, got: %s", stringBodyBytes)
+	}
+}
+
+func TestHandlePingsAPI_PartialScanErrors(t *testing.T) {
+	mockFaultyEngine := &MockEngine{
+		MockViews: []engine.TargetPingsView{
+			{URL: "https://success.com", StatusCode: 200},
+		},
+		MockErrors: []error{errors.New("row 2 failed to scan")},
+	}
+
+	webServer := web.NewServer(mockFaultyEngine, "views")
+
+	request, _ := http.NewRequest(http.MethodGet, "/api/pings", nil)
+	recorder := httptest.NewRecorder()
+
+	webServer.HandlePingsAPI(recorder, request)
+	response := recorder.Result()
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code 200 OK, got: %d", response.StatusCode)
+	}
+
+	bodyBytes, _ := io.ReadAll(response.Body)
+	stringBodyBytes := string(bodyBytes)
+	if !strings.Contains(stringBodyBytes, "https://success.com") {
+		t.Errorf("Expected string to contain mock URL, instead got: %s", stringBodyBytes)
 	}
 }

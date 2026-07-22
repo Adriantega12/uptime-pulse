@@ -25,4 +25,18 @@ jobs:
       run: go build -v ./...
 
     - name: Test
-      run: go test -v ./...
+      run: go test -v ./... -coverprofile=coverage.out
+
+    - name: Go Coverage
+      uses: gwatts/go-coverage-action@v2.0.0
+      id: coverage
+      with:
+        coverage-file: coverage.out
+        coverage-threshold: 80
+        ignore-pattern: |
+          \.pb\.go$
+          \_string\.go$
+          \main.go$
+        post-comment: true
+        notes-out-of-range: true
+      
